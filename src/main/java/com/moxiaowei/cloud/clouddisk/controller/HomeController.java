@@ -24,25 +24,25 @@ public class HomeController {
     @RequestMapping("/upload")
     @ResponseBody
     public String upload(MultipartFile data, int total, String name, int index, String id){
-        try{
-//            System.out.println(data.getSize());
-            File file = new File(path + "/" + id);
-            if(!file.exists()){
-                file.mkdirs();
-            }
-            File upload = new File(file.getAbsolutePath() + "/" + index + ".data");
-            data.transferTo(upload);
-//            System.out.println(upload.getAbsoluteFile());
-//            SplitFile.multipartFileToFile(data, file.getAbsolutePath() + "/" + index + ".data");
-
-            if(index == total + 1){
-                SplitFile.mergeFile(file, name, total);
-//                System.out.println("complete!");
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-            return e.getMessage();
-        }
+//        try{
+//////            System.out.println(data.getSize());
+////            File file = new File(path + "/" + id);
+////            if(!file.exists()){
+////                file.mkdirs();
+////            }
+////            File upload = new File(file.getAbsolutePath() + "/" + index + ".data");
+////            data.transferTo(upload);
+//////            System.out.println(upload.getAbsoluteFile());
+//////            SplitFile.multipartFileToFile(data, file.getAbsolutePath() + "/" + index + ".data");
+////
+////            if(index == total - 1){
+////                SplitFile.mergeFile(file, name, total);
+////                System.out.println("complete!");
+////            }
+////        }catch (Exception e){
+////            e.printStackTrace();
+////            return e.getMessage();
+////        }
         return "200";
     }
 

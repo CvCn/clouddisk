@@ -4,16 +4,94 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="../icon/cloud.png"/>
     <script src="../js/jquery.min.js"></script>
+    <script src="../js/vue.min.js"></script>
+    <link href="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/css/bootstrap-theme.min.css" rel="stylesheet">
+    <!--<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">-->
+    <!--<script src="https://unpkg.com/element-ui/lib/index.js"></script>-->
     <title>云盘</title>
+    <style>
+        .fileinput-button {
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+        }
+
+        .fileinput-button input {
+            position: absolute;
+            left: 0px;
+            top: 0px;
+            opacity: 0;
+            -ms-filter: 'alpha(opacity=0)';
+        }
+
+        .upl {
+            width: 50%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .top {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding-top: 10rem;
+        }
+        .dep{
+            position: absolute;
+            width: 80%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .progress{
+            height: 2rem;
+            margin-top: 2rem;
+        }
+    </style>
 </head>
 <body>
-<input type="file" id="file"/>
-<button id="upload">上传</button>
-<span id="output" style="font-size:12px">等待</span>
+<div id="app">
+
+    <div>
+        <div class="top">
+
+            <div class="upl">
+                <div class="fileinput-button btn btn-success">
+                    <span>选择文件</span>
+                    <input type="file" id="file"/>
+                </div>
+                <button type="button" id="upload" class="btn btn-primary">上传</button>
+                <!--<span id="output" style="font-size:12px">等待</span>-->
+            </div>
+
+            <div class="progress" style="width: 80%;">
+                <div class="progress-bar" :style="'width: ' + pro + '%;'">
+                    <div class="dep">
+                        <div>{{fileName}}</div>
+                        <div>{{size}}M</div>
+                        <div>{{pro}}%</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
 </body>
 <script>
     var page = {
-        init: function () {
+        init: function (app) {
+            this.app = app;
             $("#upload").click($.proxy(this.upload, this));
         },
         successCount: 0,
@@ -22,10 +100,14 @@
                 name = file.name,        //文件名
                 size = file.size;
 
+            this.app.setSize(size);
+            this.app.setFileName(name);
+            this.app.setPro(0)
+
             let shardSize = 2 * 1024 * 1024,     //以2MB为一个分片
                 shardCount = Math.ceil(size / shardSize);   //总片数
 
-            $.get('/getId', resp => {
+            $.get('http://localhost:8080/getId', resp => {
                 this.syncUpload(
                     file,
                     0,
@@ -42,6 +124,9 @@
         },
         syncUpload(file, start, end, index, shardCount, shardSize, name, size, id) {
             let _this = this
+
+            if (index >= shardCount)
+                return;
             //计算每一片的起始与结束位置
             // let start = i * shardSize,
             //     end = Math.min(size, start + shardSize);
@@ -51,21 +136,23 @@
             form.append("data", file.slice(start, end));  //slice方法用于切出文件的一部分
             form.append("name", name);
             form.append("total", shardCount);   //总片数
-            form.append("index", index + 1);        //当前是第几片
+            form.append("index", index);        //当前是第几片
             form.append("id", id);
 
             //Ajax提交
             $.ajax({
-                url: "/upload",
+                // url: "/upload",
+                url: "http://localhost:8080/upload",
                 type: "POST",
                 data: form,
                 async: true,         //异步
                 processData: false,  //很重要，告诉jquery不要对form进行处理
                 contentType: false,  //很重要，指定为false才能形成正确的Content-Type
                 success: function (resp) {
-                    if (resp == 200 && shardCount >= index + 1) {
+                    if (resp == 200) {
                         _this.successCount = _this.successCount + 1;
-                        $("#output").text(_this.successCount + " / " + shardCount);
+                        // $("#output").text(Math.floor(_this.successCount / shardCount * 100));
+                        _this.app.setPro(Math.floor(_this.successCount / shardCount * 100))
                         _this.syncUpload(file, end, Math.min(size, end + shardSize), index + 1, shardCount, shardSize, name, size, id)
                     }
 
@@ -74,7 +161,30 @@
         }
     };
     $(function () {
-        page.init();
+        var app = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    size: 0,
+                    pro: 0,
+                    fileName: '',
+                }
+            },
+            methods: {
+                setSize(val) {
+                    this.size = Math.ceil(val / 1024 / 1024 * 100) / 100
+                },
+                setPro(val) {
+                    this.pro = val
+                },
+                setFileName(fileName) {
+                    this.fileName = fileName
+                }
+            }
+
+        })
+
+        page.init(app);
     });
 </script>
 </html>

@@ -3,12 +3,8 @@ package com.moxiaowei.cloud.clouddisk.util;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Properties;
- 
+import java.util.*;
+
 /**
  * 功能说明:
  * 
@@ -48,11 +44,20 @@ public class SplitFile {
  
         // 获取该目录下所有的碎片文件
         File[] partFiles = dir.listFiles((dir12, name) -> name.endsWith(".data"));
+        ArrayList<File> treeFile = new ArrayList<>();
+        Collections.addAll(treeFile, partFiles);
+        Collections.sort(treeFile, (o1, o2)->{
+            String o1Name = o1.getName();
+            String o2Name = o2.getName();
+            o1Name = o1Name.substring(0, o1Name.lastIndexOf('.'));
+            o2Name = o2Name.substring(0, o2Name.lastIndexOf('.'));
+            return Integer.parseInt(o1Name) - Integer.parseInt(o2Name);
+        });
         // 将碎片文件存入到集合中
         List<FileInputStream> al = new ArrayList<>();
         for (int i = 0; i < splitCount; i++) {
             try {
-                al.add(new FileInputStream(partFiles[i]));
+                al.add(new FileInputStream(treeFile.get(i)));
             } catch (Exception e) {
                 // 异常
                 e.printStackTrace();
@@ -64,13 +69,16 @@ public class SplitFile {
             // 将多个流合成序列流
             SequenceInputStream sis = new SequenceInputStream(en);
             FileOutputStream fos = new FileOutputStream(new File(dir, fileName));
-            byte[] b = new byte[1024];
-            int len;
+            byte[] b = new byte[2048];
+            int len = 0;
             while ((len = sis.read(b)) != -1) {
                 fos.write(b, 0, len);
             }
             fos.close();
             sis.close();
+            for(File f : partFiles){
+                f.delete();
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
