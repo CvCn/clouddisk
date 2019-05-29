@@ -32,12 +32,12 @@ public class HomeController {
             }
             File upload = new File(file.getAbsolutePath() + "/" + index + ".data");
             data.transferTo(upload);
-            System.out.println(index);
+//            System.out.println(upload.getAbsoluteFile());
 //            SplitFile.multipartFileToFile(data, file.getAbsolutePath() + "/" + index + ".data");
 
-            if(index == total){
-//                SplitFile.mergeFile(file, name, total);
-                System.out.println("complete!");
+            if(index == total + 1){
+                SplitFile.mergeFile(file, name, total);
+//                System.out.println("complete!");
             }
         }catch (Exception e){
             e.printStackTrace();
