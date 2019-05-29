@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="../icon/cloud.png"/>
+    <script src="../js/jquery.min.js"></script>
+    <title>云盘</title>
+</head>
+<body>
+<input type="file" id="file"/>
+<button id="upload">上传</button>
+<span id="output" style="font-size:12px">等待</span>
+</body>
+<script>
+    var page = {
+        init: function () {
+            $("#upload").click($.proxy(this.upload, this));
+        },
+        successCount: 0,
+        upload: function () {
+            let file = $("#file")[0].files[0],  //文件对象
+                name = file.name,        //文件名
+                size = file.size;
+
+            let shardSize = 2 * 1024 * 1024,     //以2MB为一个分片
+                shardCount = Math.ceil(size / shardSize);   //总片数
+
+            $.get('/getId', resp => {
+                this.syncUpload(
+                    file,
+                    0,
+                    Math.min(size, shardSize),
+                    0,
+                    shardCount,
+                    shardSize,
+                    name,
+                    size,
+                    resp)
+
+            });
+
+        },
+        syncUpload(file, start, end, index, shardCount, shardSize, name, size, id) {
+            let _this = this
+            //计算每一片的起始与结束位置
+            // let start = i * shardSize,
+            //     end = Math.min(size, start + shardSize);
+
+            //构造一个表单，FormData是HTML5新增的
+            let form = new FormData();
+            form.append("data", file.slice(start, end));  //slice方法用于切出文件的一部分
+            form.append("name", name);
+            form.append("total", shardCount);   //总片数
+            form.append("index", index + 1);        //当前是第几片
+            form.append("id", id);
+
+            //Ajax提交
+            $.ajax({
+                url: "/upload",
+                type: "POST",
+                data: form,
+                async: true,         //异步
+                processData: false,  //很重要，告诉jquery不要对form进行处理
+                contentType: false,  //很重要，指定为false才能形成正确的Content-Type
+                success: function (resp) {
+                    if (resp == 200 && shardCount >= index + 1) {
+                        _this.successCount = _this.successCount + 1;
+                        $("#output").text(_this.successCount + " / " + shardCount);
+                        _this.syncUpload(file, end, Math.min(size, end + shardSize), index++, shardCount, name, size, id)
+                    }
+
+                }
+            });
+        }
+    };
+    $(function () {
+        page.init();
+    });
+</script>
+</html>
