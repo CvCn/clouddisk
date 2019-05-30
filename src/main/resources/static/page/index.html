@@ -8,8 +8,8 @@
     <link href="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
     <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/css/bootstrap-theme.min.css" rel="stylesheet">
-    <!--<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">-->
-    <!--<script src="https://unpkg.com/element-ui/lib/index.js"></script>-->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
     <title>云盘</title>
     <style>
         .fileinput-button {
@@ -26,6 +26,10 @@
             -ms-filter: 'alpha(opacity=0)';
         }
 
+        .fileinput-button input:hover {
+
+        }
+
         .upl {
             width: 50%;
             display: flex;
@@ -40,19 +44,37 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding-top: 10rem;
+            padding-top: 5rem;
         }
-        .dep{
+
+        .dep {
             position: absolute;
             width: 80%;
             display: flex;
             flex-direction: row;
             justify-content: space-around;
             align-items: center;
+            text-shadow: 1px 1px 1px gray;
         }
-        .progress{
+
+        .progress {
             height: 2rem;
             margin-top: 2rem;
+        }
+
+        .pages {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding-top: 3rem;
+        }
+
+        .progress-bar {
+            background-image: linear-gradient(to bottom, rgb(32, 160, 255) 0, rgb(32, 160, 255) 100%);
+        }
+
+        #app{
+            padding: 0 2rem;
         }
     </style>
 </head>
@@ -63,25 +85,75 @@
         <div class="top">
 
             <div class="upl">
-                <div class="fileinput-button btn btn-success">
-                    <span>选择文件</span>
-                    <input type="file" id="file"/>
+                <div class="fileinput-button btn btn-primary" :disabled="uploading">
+                    <span>{{uploading ? '上传中...' : '上传'}}</span>
+                    <input type="file" id="file" :disabled="uploading"/>
                 </div>
-                <button type="button" id="upload" class="btn btn-primary">上传</button>
+                <!--                <button type="button" id="upload" class="btn btn-primary">上传</button>-->
                 <!--<span id="output" style="font-size:12px">等待</span>-->
             </div>
 
             <div class="progress" style="width: 80%;">
-                <div class="progress-bar" :style="'width: ' + pro + '%;'">
+                <div class="progress-bar" :style="pro == 0 ? '' : 'width: ' + pro + '%;' ">
                     <div class="dep">
                         <div>{{fileName}}</div>
-                        <div>{{size}}M</div>
-                        <div>{{pro}}%</div>
+                        <div>{{size == 0 ? "" : size}}</div>
+                        <div>{{pro == 0 ? "" : pro + "%"}} {{speed == 0 ? '' : speed + '/s'}}</div>
                     </div>
                 </div>
 
             </div>
 
+        </div>
+
+
+        <div class="pages">
+            <el-pagination
+                    background
+                    layout="prev, pager, next"
+                    :total="tableData.total"
+                    :page-size="tableData.pageSize"
+                    @current-change="pageChange">
+            </el-pagination>
+        </div>
+
+        <div style="font-size: 0.8rem;">
+            共{{tableData.pages}}页，{{tableData.total}}条
+        </div>
+
+        <div class="list">
+            <template>
+                <el-table
+                        :data="tableData.list"
+                        v-loading="loading"
+                        style="width: 100%">
+                    <el-table-column
+                            label="文件"
+                    >
+                        <template slot-scope="scope">
+                            <a :href="'https://moxiaowei.com/static2/cloud/' + scope.row.id + '/' + scope.row.fileName"
+                               target="_blank">
+                                {{scope.row.fileName}}
+                            </a>
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                            prop="size"
+                            label="大小"
+                            width="180">
+                    </el-table-column>
+                    <el-table-column
+                            prop="createDate"
+                            label="上传时间">
+                    </el-table-column>
+                    <el-table-column
+                            label="">
+                        <template slot-scope="scope">
+                            <el-button type="danger" size="small" @click="deleteItem(scope.row.id)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </template>
         </div>
     </div>
 
@@ -89,25 +161,89 @@
 
 </body>
 <script>
+
+    /// <summary>
+    /// 格式化文件大小的JS方法
+    /// </summary>
+    /// <param name="filesize">文件的大小,传入的是一个bytes为单位的参数</param>
+    /// <returns>格式化后的值</returns>
+    function renderSize(value) {
+        // console.log(123, value)
+        if (null == value || value == '' || value == Infinity) {
+            return "0 Bytes";
+        }
+        var unitArr = new Array("Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB");
+        var index = 0;
+        var srcsize = parseFloat(value);
+        index = Math.floor(Math.log(srcsize) / Math.log(1024));
+        var size = srcsize / Math.pow(1024, index);
+        size = size.toFixed(2);//保留的小数位数
+        return size + unitArr[index];
+    }
+
+
+    // 对Date的扩展，将 Date 转化为指定格式的String
+    // 月(M)、日(d)、小时(h)、分(m)、秒(s)、季度(q) 可以用 1-2 个占位符，
+    // 年(y)可以用 1-4 个占位符，毫秒(S)只能用 1 个占位符(是 1-3 位的数字)
+    // 例子：
+    // (new Date()).Format("yyyy-MM-dd hh:mm:ss.S") ==> 2006-07-02 08:09:04.423
+    // (new Date()).Format("yyyy-M-d h:m:s.S")      ==> 2006-7-2 8:9:4.18
+    Date.prototype.Format = function (fmt) { //author: meizz
+        var o = {
+            "M+": this.getMonth() + 1,                 //月份
+            "d+": this.getDate(),                    //日
+            "h+": this.getHours(),                   //小时
+            "m+": this.getMinutes(),                 //分
+            "s+": this.getSeconds(),                 //秒
+            "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+            "S": this.getMilliseconds()             //毫秒
+        };
+        if (/(y+)/.test(fmt))
+            fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+        for (var k in o)
+            if (new RegExp("(" + k + ")").test(fmt))
+                fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+        return fmt;
+    }
+
+
     var page = {
         init: function (app) {
             this.app = app;
-            $("#upload").click($.proxy(this.upload, this));
+            // $("#upload").click($.proxy(this.upload, this));
+            $("#file").change(event => {
+                if (this.app.uploading)
+                    return;
+                this.fileEvent = event;
+                this.successCount = 0;
+                this.app.setPro(0);
+                $.proxy(this.upload, this);
+                setTimeout(() => {
+                    this.upload();
+                }, 100)
+            })
         },
         successCount: 0,
         upload: function () {
+
+            this.app.unset();
+
             let file = $("#file")[0].files[0],  //文件对象
                 name = file.name,        //文件名
                 size = file.size;
 
+
             this.app.setSize(size);
             this.app.setFileName(name);
-            this.app.setPro(0)
+            this.app.setPro(0);
 
             let shardSize = 2 * 1024 * 1024,     //以2MB为一个分片
                 shardCount = Math.ceil(size / shardSize);   //总片数
 
-            $.get('http://localhost:8080/getId', resp => {
+            this.timestamp = new Date().getTime();
+            this.upcount = 0;
+            $.get('/getId', resp => {
+                this.app.setUploading(true)
                 this.syncUpload(
                     file,
                     0,
@@ -122,7 +258,7 @@
             });
 
         },
-        syncUpload(file, start, end, index, shardCount, shardSize, name, size, id) {
+        syncUpload: function (file, start, end, index, shardCount, shardSize, name, size, id) {
             let _this = this
 
             if (index >= shardCount)
@@ -142,7 +278,7 @@
             //Ajax提交
             $.ajax({
                 // url: "/upload",
-                url: "http://localhost:8080/upload",
+                url: "/upload",
                 type: "POST",
                 data: form,
                 async: true,         //异步
@@ -152,8 +288,34 @@
                     if (resp == 200) {
                         _this.successCount = _this.successCount + 1;
                         // $("#output").text(Math.floor(_this.successCount / shardCount * 100));
-                        _this.app.setPro(Math.floor(_this.successCount / shardCount * 100))
+                        _this.app.setPro(Math.floor(_this.successCount / shardCount * 100));
+
+                        let dif = new Date().getTime() - _this.timestamp;
+                        _this.upcount = _this.upcount + (end - start);
+                        if (dif < 1)
+                            dif = 1;
+                        _this.app.speed = renderSize(_this.upcount / dif * 1000);
+
+
                         _this.syncUpload(file, end, Math.min(size, end + shardSize), index + 1, shardCount, shardSize, name, size, id)
+
+                        if (_this.successCount == shardCount) {
+                            setTimeout(() => {
+                                _this.app.$message({
+                                    message: '上传成功',
+                                    type: 'success',
+                                    onClose() {
+
+                                    }
+                                })
+                                _this.fileEvent.target.value = '';
+                                _this.app.getData()
+                                _this.app.setUploading(false)
+                            }, 500)
+                        }
+
+                        // _this.app.setPro(0)
+
                     }
 
                 }
@@ -168,17 +330,93 @@
                     size: 0,
                     pro: 0,
                     fileName: '',
+                    tableData: {},
+                    pageNum: 1,
+                    pageSize: 50,
+                    loading: false,
+                    uploading: false,
+                    speed: 0
                 }
+            },
+            mounted() {
+                this.getData(1, 20)
             },
             methods: {
                 setSize(val) {
-                    this.size = Math.ceil(val / 1024 / 1024 * 100) / 100
+                    this.size = renderSize(val);
                 },
                 setPro(val) {
-                    this.pro = val
+                    this.pro = val;
                 },
                 setFileName(fileName) {
-                    this.fileName = fileName
+                    if (fileName.length > 50) {
+                        fileName = fileName.substr(0, 50) + '...';
+                    }
+                    this.fileName = fileName;
+                },
+                unset() {
+                    this.size = 0;
+                    this.pro = 0;
+                    this.fileName = '';
+                },
+                setUploading(val) {
+                    this.uploading = val;
+                },
+                getData() {
+                    var _this = this
+                    this.loading = true;
+                    $.get('/get', {
+                        pageNum: this.pageNum,
+                        pageSize: this.pageSize
+                    }, resp => {
+                        let list = resp.list
+                        for (let i in list) {
+                            list[i].size = renderSize(list[i].size)
+                            // if (list[i].fileName.length > 80) {
+                            //     list[i].fileName = list[i].fileName.substr(0, 80) + '...'
+                            // }
+                            let date = new Date(list[i].createDate);
+                            list[i].createDate = date.Format("yyyy-MM-dd hh:mm:ss")
+
+                        }
+                        _this.tableData = resp;
+                        _this.loading = false
+                    })
+                },
+                pageChange(val) {
+                    this.pageNum = val;
+                    this.getData()
+                },
+                deleteItem(ev) {
+
+                    var that = this
+
+                    this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        $.get("/delete", {
+                            id: ev
+                        }, resp => {
+                            if (that.tableData.list.length <= 1) {
+                                that.pageNum = that.pageNum - 1
+                                if (that.pageNum < 1)
+                                    that.pageNum = 1
+                            }
+                            that.getData();
+                            that.$message({
+                                type: 'success',
+                                message: '删除成功!'
+                            });
+                        })
+                    }).catch(() => {
+                        // this.$message({
+                        //     type: 'info',
+                        //     message: '已取消删除'
+                        // });
+                    });
+
                 }
             }
 

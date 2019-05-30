@@ -7,7 +7,7 @@ public class IdUtils {
     private static long lastTimeStamp = 0L;
 
     public static String getId() {
-        return System.currentTimeMillis() + "_" + getNext();
+        return System.currentTimeMillis() + "" + getNext();
     }
 
     private static synchronized long getNext() {

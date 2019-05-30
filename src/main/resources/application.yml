@@ -1,10 +1,21 @@
 server:
-  port: 8080
+  port: 10080
 spring:
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 5MB
+  datasource:
+    url: jdbc:mysql://47.95.215.116:3306/clouddisk?useUnicode=true
+    username: root
+    password: zzzqaz0wsx0
+    driver-class-name: com.mysql.jdbc.Driver
+
 
 file:
-  path: C:\Users\cvge\Desktop
+#  path: C:\Users\htsd\Desktop
+  path: /usr/local/www/static2/cloud
+
+mybatis:
+  config-locations:
+    type-aliases-package: com/moxiaowei/cloud/clouddisk/mapper/CloudRecordMapper
