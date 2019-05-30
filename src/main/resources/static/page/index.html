@@ -16,6 +16,11 @@
             position: relative;
             display: inline-block;
             overflow: hidden;
+            height: 10rem;
+            width: 10rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .fileinput-button input {
@@ -24,10 +29,8 @@
             top: 0px;
             opacity: 0;
             -ms-filter: 'alpha(opacity=0)';
-        }
-
-        .fileinput-button input:hover {
-
+            height: 10rem;
+            width: 10rem;
         }
 
         .upl {
@@ -87,7 +90,7 @@
             <div class="upl">
                 <div class="fileinput-button btn btn-primary" :disabled="uploading">
                     <span>{{uploading ? '上传中...' : '上传'}}</span>
-                    <input type="file" id="file" :disabled="uploading"/>
+                    <input type="file" id="file" :disabled="uploading" multiple />
                 </div>
                 <!--                <button type="button" id="upload" class="btn btn-primary">上传</button>-->
                 <!--<span id="output" style="font-size:12px">等待</span>-->
@@ -204,7 +207,7 @@
             if (new RegExp("(" + k + ")").test(fmt))
                 fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
         return fmt;
-    }
+    };
 
 
     var page = {
@@ -212,8 +215,14 @@
             this.app = app;
             // $("#upload").click($.proxy(this.upload, this));
             $("#file").change(event => {
-                if (this.app.uploading)
-                    return;
+                // if (this.app.uploading)
+                //     return;
+
+                let files = $("#file")[0].files;  //文件对象
+                for(let file in files){
+
+                }
+
                 this.fileEvent = event;
                 this.successCount = 0;
                 this.app.setPro(0);
@@ -224,12 +233,12 @@
             })
         },
         successCount: 0,
-        upload: function () {
+        upload: function (file) {
 
             this.app.unset();
 
-            let file = $("#file")[0].files[0],  //文件对象
-                name = file.name,        //文件名
+            // let file = $("#file")[0].files[0],  //文件对象
+               let name = file.name,        //文件名
                 size = file.size;
 
 
