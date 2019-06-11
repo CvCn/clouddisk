@@ -12,6 +12,7 @@ spring:
     driver-class-name: com.mysql.jdbc.Driver
 
 
+
 file:
 #  path: C:\Users\htsd\Desktop
   path: /usr/local/www/static2/cloud

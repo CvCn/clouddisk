@@ -79,4 +79,11 @@ public class HomeController {
         return this.cloudRecordService.delete(id);
     }
 
+
+    @RequestMapping("/like")
+    @ResponseBody
+    public PageInfo<CloudRecord> like(String fileName, int pageNum, int pageSize){
+        return this.cloudRecordService.like(fileName, pageNum, pageSize);
+    }
+
 }

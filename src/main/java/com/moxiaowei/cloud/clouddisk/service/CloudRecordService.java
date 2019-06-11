@@ -46,4 +46,11 @@ public class CloudRecordService {
         }
         return this.cloudRecordMapper.delete(id);
     }
+
+
+    public PageInfo<CloudRecord> like(String fileName, int pageNum, int pageSize){
+        PageHelper.startPage(pageNum, pageSize).setOrderBy("createDate desc");
+        List<CloudRecord> like = this.cloudRecordMapper.like(fileName);
+        return new PageInfo<>(like);
+    }
 }

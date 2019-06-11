@@ -3,6 +3,7 @@ package com.moxiaowei.cloud.clouddisk.mapper;
 import com.moxiaowei.cloud.clouddisk.pojo.CloudRecord;
 import org.apache.ibatis.annotations.*;
 
+
 import java.util.List;
 
 @Mapper
@@ -17,4 +18,7 @@ public interface CloudRecordMapper {
 
     @Delete("delete from CloudRecord where id=#{0}")
     int delete(Long id);
+
+    @Select("select * form CloudRecord where fileName like '%#{0}%'")
+    List<CloudRecord> like(String fileName);
 }
