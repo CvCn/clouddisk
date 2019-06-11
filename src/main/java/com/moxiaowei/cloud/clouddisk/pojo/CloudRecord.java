@@ -1,5 +1,7 @@
 package com.moxiaowei.cloud.clouddisk.pojo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import java.util.Date;
 
 public class CloudRecord {
@@ -7,6 +9,7 @@ public class CloudRecord {
     private long id;
     private String fileName;
     private long size;
+    @JsonFormat(pattern="yyyy/MM/dd HH:mm:ss.SSS",timezone = "GMT+8")
     private Date createDate;
     private String suffix;
 

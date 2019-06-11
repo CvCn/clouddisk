@@ -26,7 +26,7 @@ public class CloudRecordService {
     public int add(CloudRecord cr){
         cr.setCreateDate(new Date());
         String fileName = cr.getFileName();
-        cr.setSuffix(fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length() -1));
+        cr.setSuffix(fileName.substring(fileName.lastIndexOf('.') + 1));
         return this.cloudRecordMapper.add(cr);
     }
 

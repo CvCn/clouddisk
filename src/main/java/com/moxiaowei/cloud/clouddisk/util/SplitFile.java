@@ -1,8 +1,9 @@
 package com.moxiaowei.cloud.clouddisk.util;
 
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.SequenceInputStream;
 import java.util.*;
 
 /**

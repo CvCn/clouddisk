@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/png" href="../icon/cloud.png"/>
     <script src="../js/jquery.min.js"></script>
-    <script src="../js/vue.min.js"></script>
+    <!--    <script src="../js/vue.min.js"></script>-->
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <link href="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.bootcss.com/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
     <link href="https://cdn.bootcss.com/twitter-bootstrap/3.4.1/css/bootstrap-theme.min.css" rel="stylesheet">
@@ -16,11 +17,12 @@
             position: relative;
             display: inline-block;
             overflow: hidden;
-            height: 10rem;
-            width: 10rem;
+            height: 5rem;
+            width: 5rem;
             display: flex;
             justify-content: center;
             align-items: center;
+            font-size: 0.9rem;
         }
 
         .fileinput-button input {
@@ -29,8 +31,8 @@
             top: 0px;
             opacity: 0;
             -ms-filter: 'alpha(opacity=0)';
-            height: 10rem;
-            width: 10rem;
+            height: 5rem;
+            width: 5rem;
         }
 
         .upl {
@@ -52,12 +54,12 @@
 
         .dep {
             position: absolute;
-            width: 80%;
             display: flex;
             flex-direction: row;
             justify-content: space-around;
             align-items: center;
             text-shadow: 1px 1px 1px gray;
+            width: 70%;
         }
 
         .progress {
@@ -76,8 +78,18 @@
             background-image: linear-gradient(to bottom, rgb(32, 160, 255) 0, rgb(32, 160, 255) 100%);
         }
 
-        #app{
+        #app {
             padding: 0 2rem;
+        }
+
+        .waitList{
+            display: flex;
+            flex-direction: column;
+            margin-top: 2rem;
+            background-color: #F5F7FA;
+            width: 50%;
+            color: #606266;
+            padding: 2rem 2rem;
         }
     </style>
 </head>
@@ -90,7 +102,7 @@
             <div class="upl">
                 <div class="fileinput-button btn btn-primary" :disabled="uploading">
                     <span>{{uploading ? '上传中...' : '上传'}}</span>
-                    <input type="file" id="file" :disabled="uploading" multiple />
+                    <input type="file" id="file" :disabled="uploading" multiple/>
                 </div>
                 <!--                <button type="button" id="upload" class="btn btn-primary">上传</button>-->
                 <!--<span id="output" style="font-size:12px">等待</span>-->
@@ -105,6 +117,12 @@
                     </div>
                 </div>
 
+            </div>
+
+            <div v-if="files.length > 0" class="waitList">
+                <div>上传列表</div>
+                <br />
+                <div v-for="item in files">{{item.name}}</div>
             </div>
 
         </div>
@@ -219,26 +237,36 @@
                 //     return;
 
                 let files = $("#file")[0].files;  //文件对象
-                for(let file in files){
-
-                }
-
-                this.fileEvent = event;
-                this.successCount = 0;
-                this.app.setPro(0);
+                // let f = [];
+                this.app.setFiles(files);
                 $.proxy(this.upload, this);
-                setTimeout(() => {
-                    this.upload();
-                }, 100)
+                this.upList(this, files, 0, event);
+
             })
         },
         successCount: 0,
-        upload: function (file) {
+        allCount: 0,
+        upList(that, files, index, event) {
+            let _this = this;
+            if (index >= files.length) {
+                event.target.value = '';
+                return;
+            }
+
+            that.successCount = 0;
+            that.app.setPro(0);
+            // $.proxy(that.upload, that);
+            that.upload(files[index], () => {
+                that.app.disFile();
+                _this.upList(that, files, index + 1, event)
+            })
+        },
+        upload: function (file, callBack) {
 
             this.app.unset();
 
             // let file = $("#file")[0].files[0],  //文件对象
-               let name = file.name,        //文件名
+            let name = file.name,        //文件名
                 size = file.size;
 
 
@@ -252,7 +280,7 @@
             this.timestamp = new Date().getTime();
             this.upcount = 0;
             $.get('/getId', resp => {
-                this.app.setUploading(true)
+                this.app.setUploading(true);
                 this.syncUpload(
                     file,
                     0,
@@ -262,13 +290,14 @@
                     shardSize,
                     name,
                     size,
-                    resp)
+                    resp,
+                    callBack)
 
             });
 
         },
-        syncUpload: function (file, start, end, index, shardCount, shardSize, name, size, id) {
-            let _this = this
+        syncUpload: function (file, start, end, index, shardCount, shardSize, name, size, id, callBack) {
+            let _this = this;
 
             if (index >= shardCount)
                 return;
@@ -306,7 +335,7 @@
                         _this.app.speed = renderSize(_this.upcount / dif * 1000);
 
 
-                        _this.syncUpload(file, end, Math.min(size, end + shardSize), index + 1, shardCount, shardSize, name, size, id)
+                        _this.syncUpload(file, end, Math.min(size, end + shardSize), index + 1, shardCount, shardSize, name, size, id, callBack);
 
                         if (_this.successCount == shardCount) {
                             setTimeout(() => {
@@ -317,9 +346,13 @@
 
                                     }
                                 })
-                                _this.fileEvent.target.value = '';
+                                // _this.fileEvent.target.value = '';
                                 _this.app.getData()
-                                _this.app.setUploading(false)
+                                _this.app.setUploading(false);
+
+                                if (callBack)
+                                    callBack();
+                                // console.log(callBack)
                             }, 500)
                         }
 
@@ -344,7 +377,8 @@
                     pageSize: 50,
                     loading: false,
                     uploading: false,
-                    speed: 0
+                    speed: 0,
+                    files: [],
                 }
             },
             mounted() {
@@ -384,8 +418,8 @@
                             // if (list[i].fileName.length > 80) {
                             //     list[i].fileName = list[i].fileName.substr(0, 80) + '...'
                             // }
-                            let date = new Date(list[i].createDate);
-                            list[i].createDate = date.Format("yyyy-MM-dd hh:mm:ss")
+                            // let date = new Date(list[i].createDate.replace('-', '/'));
+                            // list[i].createDate = date.Format("yyyy-MM-dd hh:mm:ss")
 
                         }
                         _this.tableData = resp;
@@ -425,6 +459,25 @@
                         //     message: '已取消删除'
                         // });
                     });
+
+                },
+                setFiles(files) {
+                    let f = [];
+                    // console.log(files);
+                    for (let i in files) {
+                        // console.log(files[i])
+                        f.push(files[i])
+                    }
+                    f.pop();
+                    f.pop();
+                    this.files = f;
+                },
+                disFile() {
+                    let files = this.files;
+                    files = files.reverse();
+                    files.pop();
+                    files = files.reverse();
+                    this.files = files;
 
                 }
             }
